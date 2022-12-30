@@ -27,3 +27,16 @@ variable "azs" {
     # }
   }
 }
+
+# enable_nat_gatewayがtrueの時にnat_gatewayが作成される
+# applyするときに-varオプションをつけてfalseを指定し、実行するとnat_gatewayは作られない
+# terraform apply -var='enable_nat_gateway=false'
+variable "enable_nat_gateway" {
+  type = bool
+  default = true
+}
+
+variable "single_nat_gateway" {
+  type = bool
+  default = true
+}
