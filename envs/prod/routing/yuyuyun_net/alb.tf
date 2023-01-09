@@ -35,3 +35,42 @@ resource "aws_lb" "this" {
     Name = "${local.name_prefix}-yuyuyun-net"
   }
 }
+
+resource "aws_lb_listener" "https" {
+  count = var.enable_alb ? 1 : 0
+  # protocolをhttpsを指定した場合はcertificate_arnが必要
+  certificate_arn = aws_acm_certificate.root.arn
+  # このリスナーに紐づくロードバランサーのarnを指定 
+  load_balancer_arn = aws_lb.this[0].arn
+  port = 443
+  protocol = "HTTPS"
+  # protocolにhttpsを指定したらssl_policyを指定うる必要あり。以下のやつはデフォルトで設定されるやつ
+  ssl_policy = "ELBSecurityPolicy-2016-08"
+  # ALBがリクエストを受け付けた時のデフォルトのアクションを指定
+  default_action {
+    # 固定のレスポンスを返すように指定
+    type = "fixed-response"
+    fixed_response{
+      content_type = "text/plain"
+      message_body = "Fixed response content"
+      status_code = "200"
+    }
+  }
+}
+
+resource "aws_lb_listener" "redirect_http_to_https" {
+  count = var.enable_alb ? 1 : 0
+  load_balancer_arn = aws_lb.this[0].arn
+  port = 80
+  protocol = "HTTP"
+
+  default_action {
+    type = "redirect"
+
+    redirect {
+      port = "443"
+      protocol = "HTTPS"
+      status_code = "HTTP_301"
+    }
+  }
+}
