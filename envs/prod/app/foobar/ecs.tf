@@ -105,3 +105,58 @@ resource "aws_ecs_task_definition" "this" {
     name = "${local.name_prefix}-${local.service_name}"
   }
 }
+
+resource "aws_ecs_service" "this" {
+  # ECSサービス名
+  name = "${local.name_prefix}-${local.service_name}"
+  # 属するECSクラスターのARNを指定
+  cluster = aws_ecs_cluster.this.arn
+
+  capacity_provider_strategy {
+    # キャパシティプロバイダーを指定
+    capacity_provider = "FARGATE_SPOT"
+    # 実行する最小限のタスク数を指定
+    base = 0
+    # 比率を指定できるが、キャパシティプロバイダーをSPOTのみとしているので、1としているが特に意味ない。
+    weight = 1
+  }
+  # Fargateのバージョン
+  platform_version = "1.4.0"
+  # タスク定義のARNを指定
+  task_definition = aws_ecs_task_definition.this.arn
+  # 起動させておくタスク数
+  desired_count = var.desired_count
+  # 最低いくつタスクを起動させておくかをパーセントで指定する。今回は(desire_count分)1個起動させておくので,100%だと最低1個は起動した状態になる
+  deployment_minimum_healthy_percent = 100
+  # 上記の逆。最大幾つ起動させとくか
+  deployment_maximum_percent = 200
+
+  # 使用するロードバランサーの設定
+  load_balancer {
+    # ロードバランサーがトラフィックがフォワードするコンテナ、ポートを指定
+    container_name = "nginx"
+    container_port = 80
+    # タスクを登録するターゲットグループのARNを指定
+    target_group_arn = data.terraform_remote_state.routing_appfoobar_link.outputs.lb_target_group_foobar_arn
+  }
+  # ヘルスチェックで異常が出た時、以上の状態を無視しておく秒数を指定
+  health_check_grace_period_seconds = 60
+
+  # タスクのネットワーク設定
+  network_configuration {
+    # 今回はプライベートサブネットで起動させるので、パブリックIPは割り当てない
+    assign_public_ip = false
+    security_groups = [
+      data.terraform_remote_state.network_main.outputs.security_group_vpc_id
+    ]
+    subnets = [
+      for s in data.terraform_remote_state.network_main.outputs.subnet_private : s.id
+    ]
+  }
+
+  enable_execute_command = true
+
+  tags = {
+    Name = "${local.name_prefix}-${local.service_name}"
+  }
+}
