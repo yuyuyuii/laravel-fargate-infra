@@ -28,10 +28,10 @@ resource "aws_route53_record" "root_a" {
   # 名前解決してほしいホストゾーンのIDを指定
   zone_id = data.aws_route53_zone.this.zone_id
 
-# ALIASレコードの場合、aliasブロックを定義して、ALBやDNS名、ゾーンIDを指定する
+  # ALIASレコードの場合、aliasブロックを定義して、ALBやDNS名、ゾーンIDを指定する
   alias {
     evaluate_target_health = true
-    name = aws_lb.this[0].dns_name
-    zone_id = aws_lb.this[0].zone_id
+    name                   = aws_lb.this[0].dns_name
+    zone_id                = aws_lb.this[0].zone_id
   }
 }
